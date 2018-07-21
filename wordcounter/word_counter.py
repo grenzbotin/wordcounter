@@ -66,8 +66,9 @@ def replace_abbreviations(text, language):
     return new_text.lower()
 
 def write_to_json(words, data, destination, tagger):
+    data.setdefault("list", [])
+    listItem = {}
     if len(destination) > 0:
-        listItem = {}
         listItem["party"] = destination[0]
         listItem["lastName"] = destination[1]
         listItem["firstName"] = destination[2]
@@ -76,7 +77,7 @@ def write_to_json(words, data, destination, tagger):
         listItem["day"] = destination[5][:-4]
         listItem.setdefault("words", [])
     else:
-        listItem = []
+        listItem.setdefault("text", [])
 
     for item in words:
         y = {}
@@ -92,12 +93,12 @@ def write_to_json(words, data, destination, tagger):
 
         if len(destination) > 0:
             listItem["words"].append(y)
-        else: listItem.append(y)
+        else: listItem["text"].append(y)
 
-    data.append(listItem)
+    data["list"].append(listItem)
 
 if __name__=='__main__':
-    data = []
+    data = {}
     destination = []
     option = ""
     language = 'en'

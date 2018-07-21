@@ -46,16 +46,20 @@ python word_counter.py de
 
 #### Output (language default: 'en'):
 ```
-[
-  [
+{
+  list: [
     {
-      "count": 30,
-      "tag": "KON",
-      "word": "und"
-    }, 
-    {..}
+      text: [
+        {
+          "count": 30,
+          "tag": "KON",
+          "word": "und"
+        }, 
+      {..},
+      ]
+      {..},
+    }
   ],
-  [..]
 ]
 ```
 
@@ -74,21 +78,24 @@ So, imagine our file is named Germany_Schneider_Anton_2018_07_21.txt
 Given that, the json file will be structured the following way:
 
 ```
-[{
-  "firstName": "Anton",
-  "lastName": "Schneider",
-  "month": "07",
-  "year": 2018,
-  "day": "21"
-  "party": "Germany",
-  "words":[{
-    "count": 30,
-    "tag": "KON",
-    "word": "and"
-  }, 
-  {..}]
-},
-{..}]
+{
+  list: [
+    {
+      "firstName": "Anton",
+      "lastName": "Schneider",
+      "month": "07",
+      "year": 2018,
+      "day": "21"
+      "party": "Germany",
+      "words":[{
+        "count": 30,
+        "tag": "KON",
+        "word": "and"
+      }, 
+      {..}]
+    }
+  ]
+}
 ```
 
 
