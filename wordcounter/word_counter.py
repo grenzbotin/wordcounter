@@ -1,6 +1,14 @@
-import sys,re,collections,nltk
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
+import sys,re,collections,os,json
+import treetaggerwrapper
+
+from os.path import join, dirname
+from dotenv import load_dotenv
+ 
+# Create .env file path.
+dotenv_path = join(dirname(__file__), '..', '.env')
+ 
+# Load file from the path.
+load_dotenv(dotenv_path)
 
 # patterns that used to find or/and replace particular chars or words
 # to find chars that are not a letter, a blank or a quotation
@@ -24,48 +32,15 @@ pat_are = re.compile("(?<=[a-zA-Z])\'re")
 # to find the abbreviation of have
 pat_ve = re.compile("(?<=[a-zA-Z])\'ve")
 
-
-lmtzr = WordNetLemmatizer()
-
+path = 'files'
 
 def get_words(file):  
-    with open (file) as f:  
-        words_box=[]
+    with open (path+'/'+file) as f:  
+        words_box = []
         pat = re.compile(r'[^a-zA-Z \']+')
         for line in f:                           
-            #if re.match(r'[a-zA-Z]*',line): 
-            #    words_box.extend(line.strip().strip('\'\"\.,').lower().split())
-            # words_box.extend(pat.sub(' ', line).strip().lower().split())
-            words_box.extend(merge(replace_abbreviations(line).split()))
-    return collections.Counter(words_box)  
-
-
-def merge(words):
-    new_words = []
-    for word in words:
-        if word:
-            tag = nltk.pos_tag(word_tokenize(word)) # tag is like [('bigger', 'JJR')]
-            pos = get_wordnet_pos(tag[0][1])
-            if pos:
-                lemmatized_word = lmtzr.lemmatize(word, pos)
-                new_words.append(lemmatized_word)
-            else:
-                new_words.append(word)
-    return new_words
-
-
-def get_wordnet_pos(treebank_tag):
-    if treebank_tag.startswith('J'):
-        return nltk.corpus.wordnet.ADJ
-    elif treebank_tag.startswith('V'):
-        return nltk.corpus.wordnet.VERB
-    elif treebank_tag.startswith('N'):
-        return nltk.corpus.wordnet.NOUN
-    elif treebank_tag.startswith('R'):
-        return nltk.corpus.wordnet.ADV
-    else:
-        return ''
-
+            words_box.extend(replace_abbreviations(line).split())
+    return collections.Counter(words_box)
 
 def replace_abbreviations(text):
     new_text = text
@@ -82,27 +57,62 @@ def replace_abbreviations(text):
     new_text = new_text.replace('\'', ' ')
     return new_text
 
+def write_to_json(words, data, destination, tagger):
+    if len(destination) > 0:
+        listItem = {}
+        listItem["party"] = destination[0]
+        listItem["lastName"] = destination[1]
+        listItem["firstName"] = destination[2]
+        listItem["year"] = destination[3]
+        listItem["month"] = destination[4]
+        listItem["day"] = destination[5][:-4]
+        listItem.setdefault("words", [])
+    else:
+        listItem = []
 
-def append_ext(words):
-    new_words = []
     for item in words:
+        y = {}
         word, count = item
-        tag = nltk.pos_tag(word_tokenize(word))[0][1] # tag is like [('bigger', 'JJR')]
-        new_words.append((word, count, tag))
-    return new_words
+        tag = tagger.tag_text(unicode(word))
+        maketags=treetaggerwrapper.make_tags(tag)
+        for item in maketags:
+            y["tag"] = item[1]
+        y["word"] = word
+        y["count"] = count
 
-def write_to_file(words, file='results.txt'):
-    f = open(file, 'w')
-    for item in words:
-        for field in item:
-            f.write(str(field)+',')
-        f.write('\n')
+        
 
+        if len(destination) > 0:
+            listItem["words"].append(y)
+        else: listItem.append(y)
+
+    data.append(listItem)
 
 if __name__=='__main__':
-    book = sys.argv[1]
-    print "counting..."
-    words = get_words(book)
-    print "writing file..."
-    write_to_file(append_ext(words.most_common()))
+    data = []
+    destination = []
+    option = ""
+    language = 'en'
+
+    if len(sys.argv) > 1:
+        language = sys.argv[1]
+        if len(sys.argv) > 2: 
+            option = sys.argv[2]
     
+    tagger = treetaggerwrapper.TreeTagger(TAGLANG=language,TAGDIR=os.getenv('TREETAGGER_DIR'))
+
+    for filename in os.listdir(path):
+        if filename.endswith('.txt'):
+            print "counting..."
+            words = get_words(filename)
+
+            if option == "filename":
+                destination = filename.split("_")
+
+            print "writing file..."
+            write_to_json(words.most_common(), data, destination, tagger)
+
+    with open('data.json', 'w') as outfile:  
+        json.dump(data, outfile)
+    
+
